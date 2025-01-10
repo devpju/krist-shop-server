@@ -3,6 +3,7 @@ import express from 'express'
 import morgan from 'morgan'
 import cors from 'cors'
 import connectDB from '~/config/db'
+import { APIs_V1 } from '~/routes/v1'
 const app = express()
 
 // Middlewares
@@ -18,5 +19,7 @@ connectDB()
 app.get('/', (req, res) => {
   res.send('Hello World!')
 })
+
+app.use('/v1/api', APIs_V1)
 
 export default app
