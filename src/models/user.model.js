@@ -1,6 +1,6 @@
 import mongoose, { Schema } from 'mongoose'
 import { accountStatus } from '~/constants/status'
-
+import bcrypt from 'bcrypt'
 const userSchema = new Schema(
   {
     firstName: { type: String, required: true },
@@ -24,4 +24,23 @@ const userSchema = new Schema(
   }
 )
 
-export default mongoose.model('User', userSchema)
+const saltRounds = 10
+
+userSchema.pre('save', async (next) => {
+  if (this.isModified('password')) {
+    try {
+      const salt = await bcrypt.genSalt(saltRounds)
+      this.password = await bcrypt.hash(this.password, salt)
+      next()
+    } catch (error) {
+      next(error)
+    }
+  }
+})
+
+userSchema.methods.comparePassword = async (candidatePassword) => {
+  return bcrypt.compare(candidatePassword, this.password)
+}
+
+const User = mongoose.model('User', userSchema)
+export default User

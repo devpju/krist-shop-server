@@ -6,4 +6,5 @@ const tokenSchema = new Schema({
   expiresAt: { type: Date, required: true }
 })
 
-export default mongoose.model('Token', tokenSchema)
+const Token = mongoose.model('Token', tokenSchema)
+export default Token
