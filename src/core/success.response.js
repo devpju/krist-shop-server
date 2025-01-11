@@ -11,8 +11,8 @@ class SuccessResponse {
   send(res) {
     const response = {
       message: this.message,
-      data: this.data,
-      metadata: this.metadata
+      ...(this.data && { data: this.data }),
+      ...(this.metadata && { metadata: this.metadata })
     };
 
     return res.status(this.statusCode).json(response);

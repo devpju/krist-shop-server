@@ -1,13 +1,13 @@
 const { default: User } = require('~/models/user.model');
 
 class UserRepository {
-  static findUserByEmail(email) {
-    return User.findOne({ email });
+  async findUserByEmail(email) {
+    return await User.findOne({ email }).lean();
   }
 
-  static createNewUser(userInfo) {
-    return User.create(...userInfo);
+  async createNewUser(userInfo) {
+    return await User.create(userInfo);
   }
 }
 
-export default UserRepository;
+export default new UserRepository();
