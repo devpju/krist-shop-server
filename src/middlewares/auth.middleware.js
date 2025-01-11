@@ -28,6 +28,8 @@ const authMiddleware =
 
     if (isAdmin === true && user.isAdmin === false) throw new ForbiddenError('');
 
+    req.user = user;
+
     next();
   };
 
