@@ -1,8 +1,8 @@
-const { default: User } = require('~/models/user.model');
+import User from '~/models/user.model';
 
 class UserRepository {
   async findUserByEmail(email) {
-    return await User.findOne({ email }).lean();
+    return await User.findOne({ email });
   }
 
   async createNewUser(userInfo) {

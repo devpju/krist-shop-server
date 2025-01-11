@@ -10,9 +10,10 @@ class SuccessResponse {
 
   send(res) {
     const response = {
+      status: 'success',
       message: this.message,
-      ...(this.data && { data: this.data }),
-      ...(this.metadata && { metadata: this.metadata })
+      ...(Object.keys(this.data).length > 0 && { data: this.data }),
+      ...(Object.keys(this.metadata).length > 0 && { metadata: this.metadata })
     };
 
     return res.status(this.statusCode).json(response);
