@@ -1,4 +1,5 @@
 import env from '~/config/env';
+import { accountStatus } from '~/constants/status';
 import { tokenTimeExpiration } from '~/constants/token';
 import { ConflictError, NotFoundError, UnauthorizedError } from '~/core/error.response';
 import tokenRepository from '~/repositories/token.repository';
@@ -29,8 +30,12 @@ class AuthService {
     const user = await userRepository.findUserByEmail(email);
 
     if (!user) throw new NotFoundError('This account does not exist');
+
     if (!(await user.comparePassword(password)))
       throw new UnauthorizedError('Password is incorrect');
+
+    if (user.status === accountStatus.UNVERIFIED)
+      throw new UnauthorizedError('Your account is not verified');
 
     const accessToken = generateToken({
       payload: { id: user._id },
