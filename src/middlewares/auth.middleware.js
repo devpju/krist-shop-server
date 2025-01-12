@@ -1,36 +1,34 @@
-import { ForbiddenError, UnauthorizedError } from '~/core/error.response';
 import jwt from 'jsonwebtoken';
 import env from '~/config/env';
+
+import { ForbiddenError, UnauthorizedError } from '~/core/error.response';
 import userRepository from '~/repositories/user.repository';
 
 const authMiddleware =
   (isAdmin = false) =>
   async (req, res, next) => {
-    const authHeader = req.headers['authorization'];
+    try {
+      const authHeader = req.headers['authorization'];
+      if (!authHeader) throw new UnauthorizedError('Authorization header is missing');
 
-    if (!authHeader) throw new UnauthorizedError('Authorization header is missing');
+      const token = authHeader.split(' ')[1];
+      if (!token) throw new UnauthorizedError('Bearer token is missing');
 
-    const token = authHeader.split(' ')[1];
+      const decodedToken = jwt.verify(token, env.ACCESS_TOKEN_SECRET);
 
-    if (!token) throw new UnauthorizedError('Bearer token is missing');
-    let decodedToken = null;
-    jwt.verify(token, env.ACCESS_TOKEN_SECRET, function (err, decoded) {
-      if (err) {
-        if (err instanceof jwt.TokenExpiredError) throw new UnauthorizedError('Token has expired');
-        else throw new UnauthorizedError('Token is invalid');
+      const user = await userRepository.findUserById(decodedToken.id).lean();
+      if (!user) throw new UnauthorizedError('Token is invalid');
+
+      if (isAdmin && !user.isAdmin) throw new ForbiddenError('Access denied');
+
+      req.user = user;
+      next();
+    } catch (err) {
+      if (err instanceof jwt.TokenExpiredError) {
+        return next(new UnauthorizedError('Token has expired'));
       }
-      decodedToken = decoded;
-    });
-
-    const user = await userRepository.findUserById(decodedToken._id).lean();
-
-    if (!user) throw new UnauthorizedError('Token is invalid');
-
-    if (isAdmin === true && user.isAdmin === false) throw new ForbiddenError('');
-
-    req.user = user;
-
-    next();
+      next(err);
+    }
   };
 
 export default authMiddleware;
