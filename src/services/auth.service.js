@@ -1,7 +1,12 @@
 import env from '~/config/env';
 import { accountStatus } from '~/constants/status';
 import { tokenTimeExpiration } from '~/constants/token';
-import { ConflictError, NotFoundError, UnauthorizedError } from '~/core/error.response';
+import {
+  BadRequestError,
+  ConflictError,
+  NotFoundError,
+  UnauthorizedError
+} from '~/core/error.response';
 import tokenRepository from '~/repositories/token.repository';
 import userRepository from '~/repositories/user.repository';
 import generateSlug from '~/utils/generator.util';
@@ -25,7 +30,7 @@ class AuthService {
     return pick(newUser, ['firstName', 'lastName', 'email']);
   }
 
-  async login(reqBody, res) {
+  async login(reqBody) {
     const { email, password } = reqBody;
     const user = await userRepository.findUserByEmail(email);
 
@@ -49,12 +54,12 @@ class AuthService {
       expiresIn: tokenTimeExpiration.REFRESH_TOKEN_AGE
     });
 
-    res.cookie('refreshToken', refreshToken, {
+    const refreshTokenCookieOptions = {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: tokenTimeExpiration.REFRESH_TOKEN_AGE_SECONDS
-    });
+    };
 
     const expiresAt = new Date(Date.now() + tokenTimeExpiration.REFRESH_TOKEN_AGE_SECONDS);
     await tokenRepository.createNewToken({
@@ -65,8 +70,19 @@ class AuthService {
 
     return {
       accessToken,
-      userInfo: pick(user, ['firstName', 'lastName', 'email', 'avatar', 'status'])
+      refreshToken,
+      refreshTokenCookieOptions,
+      user: pick(user, ['firstName', 'lastName', 'email', 'avatar', 'status'])
     };
+  }
+
+  async logout(refreshToken, userId) {
+    if (!refreshToken) throw new UnauthorizedError('Refresh token missing');
+    const { deletedCount } = await tokenRepository.deleteTokenByTokenAndUserId(
+      userId,
+      refreshToken
+    );
+    if (deletedCount === 0) throw new BadRequestError('Cannot delete token');
   }
 }
 

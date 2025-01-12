@@ -1,15 +1,37 @@
 import { CreatedResponse, OKResponse } from '~/core/success.response';
-import AuthService from '~/services/auth.service';
+import authService from '~/services/auth.service';
 
 class AuthController {
   async signup(req, res) {
-    const newUser = await AuthService.signup(req.body);
+    const newUser = await authService.signup(req.body);
     new CreatedResponse({ message: 'New account created successfully', data: newUser }).send(res);
   }
 
   async login(req, res) {
-    const userInfo = await AuthService.login(req.body, res);
-    new OKResponse({ message: 'Login successfully', data: userInfo }).send(res);
+    const { accessToken, refreshToken, refreshTokenCookieOptions, user } = await authService.login(
+      req.body
+    );
+
+    res.cookie('refreshToken', refreshToken, refreshTokenCookieOptions);
+
+    new OKResponse({
+      message: 'Login successfully',
+      data: {
+        accessToken,
+        userInfo: user
+      }
+    }).send(res);
+  }
+
+  async logout(req, res) {
+    const refreshToken = req.cookies.refreshToken;
+    const userId = req.user._id.toString();
+
+    await authService.logout(refreshToken, userId);
+
+    res.clearCookie('refreshToken');
+
+    new OKResponse({ message: 'Logout successfully' }).send(res);
   }
 }
 
