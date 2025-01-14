@@ -1,5 +1,4 @@
 export const tokenTimeExpiration = {
-  ACCESS_TOKEN_AGE: '1h',
-  REFRESH_TOKEN_AGE: '7d',
-  REFRESH_TOKEN_AGE_SECONDS: 7 * 24 * 60 * 60
+  ACCESS_TOKEN: 60 * 60,
+  REFRESH_TOKEN: 60 * 60 * 24 * 7
 };

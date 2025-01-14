@@ -1,14 +1,14 @@
 import jwt from 'jsonwebtoken';
 import { BadRequestError, UnauthorizedError } from '~/core/error.response';
 
-export const generateToken = ({ payload = {}, secretKey, expiresIn }) => {
+export const generateToken = ({ payload = {}, secretKey, expiresAt }) => {
   if (!secretKey) {
     throw new BadRequestError('Missing secret key');
   }
-  if (!expiresIn) {
+  if (!expiresAt) {
     throw new BadRequestError('Missing expiration time');
   }
-  return jwt.sign(payload, secretKey, { expiresIn });
+  return jwt.sign({ ...payload, exp: expiresAt }, secretKey);
 };
 
 export const decodeToken = (token, secretKey) => {
