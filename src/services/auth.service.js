@@ -11,7 +11,7 @@ import tokenRepository from '~/repositories/token.repository';
 import userRepository from '~/repositories/user.repository';
 import generateSlug from '~/utils/generator.util';
 import { pick } from '~/utils/object.util';
-import { generateToken } from '~/utils/token.util';
+import { decodeToken, generateToken } from '~/utils/token.util';
 
 class AuthService {
   async signup(reqBody) {
@@ -43,29 +43,28 @@ class AuthService {
       throw new UnauthorizedError('Your account is not verified');
 
     const accessToken = generateToken({
-      payload: { id: user._id },
+      payload: { userId: user._id },
       secretKey: env.ACCESS_TOKEN_SECRET,
-      expiresIn: tokenTimeExpiration.ACCESS_TOKEN_AGE
+      expiresAt: Math.floor(Date.now() / 1000) + tokenTimeExpiration.ACCESS_TOKEN
     });
 
     const refreshToken = generateToken({
-      payload: { id: user._id },
+      payload: { userId: user._id },
       secretKey: env.REFRESH_TOKEN_SECRET,
-      expiresIn: tokenTimeExpiration.REFRESH_TOKEN_AGE
+      expiresAt: Math.floor(Date.now() / 1000) + tokenTimeExpiration.REFRESH_TOKEN
     });
 
     const refreshTokenCookieOptions = {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: tokenTimeExpiration.REFRESH_TOKEN_AGE_SECONDS
+      maxAge: tokenTimeExpiration.REFRESH_TOKEN
     };
 
-    const expiresAt = new Date(Date.now() + tokenTimeExpiration.REFRESH_TOKEN_AGE_SECONDS);
     await tokenRepository.createNewToken({
       token: refreshToken,
       userId: user._id,
-      expiresAt
+      expiresAt: new Date(Date.now() + tokenTimeExpiration.REFRESH_TOKEN * 1000)
     });
 
     return {
@@ -83,6 +82,44 @@ class AuthService {
       refreshToken
     );
     if (deletedCount === 0) throw new BadRequestError('Cannot delete token');
+  }
+
+  async refreshToken(refreshToken) {
+    if (!refreshToken) throw new UnauthorizedError('Refresh token missing');
+
+    const decoded = decodeToken(refreshToken, env.REFRESH_TOKEN_SECRET);
+
+    const foundRefreshToken = await tokenRepository.findTokenByTokenAndUserId(
+      decoded.userId,
+      refreshToken
+    );
+
+    if (!foundRefreshToken) throw new UnauthorizedError('Refresh token is invalid');
+    console.log(Math.floor(Date.now() / 1000) + tokenTimeExpiration.ACCESS_TOKEN);
+    const newAccessToken = generateToken({
+      payload: { userId: foundRefreshToken.userId },
+      secretKey: env.ACCESS_TOKEN_SECRET,
+      expiresAt: Math.floor(Date.now() / 1000) + tokenTimeExpiration.ACCESS_TOKEN
+    });
+
+    const newRefreshToken = generateToken({
+      payload: { id: foundRefreshToken.id },
+      secretKey: env.REFRESH_TOKEN_SECRET,
+      expiresAt: foundRefreshToken.expiresAt.getTime() / 1000
+    });
+
+    const refreshTokenCookieOptions = {
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: foundRefreshToken.expiresAt.getTime() / 1000 - Date.now() / 1000
+    };
+
+    return {
+      newAccessToken,
+      newRefreshToken,
+      refreshTokenCookieOptions
+    };
   }
 }
 

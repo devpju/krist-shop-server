@@ -33,6 +33,17 @@ class AuthController {
 
     new OKResponse({ message: 'Logout successfully' }).send(res);
   }
+
+  async refreshToken(req, res) {
+    const refreshToken = req.cookies.refreshToken;
+    const { newAccessToken, newRefreshToken, refreshTokenCookieOptions } =
+      await authService.refreshToken(refreshToken);
+    res.cookie('refreshToken', newRefreshToken, refreshTokenCookieOptions);
+    new OKResponse({
+      message: 'Refresh token successfully',
+      data: { accessToken: newAccessToken }
+    }).send(res);
+  }
 }
 
 export default new AuthController();
