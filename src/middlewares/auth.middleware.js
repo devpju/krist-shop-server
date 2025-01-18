@@ -15,12 +15,15 @@ const authMiddleware =
 
       const token = authHeader.split(' ')[1];
       if (!token) throw new UnauthorizedError('Bearer token is missing');
-
       const decodedToken = decodeToken(token, env.ACCESS_TOKEN_SECRET);
 
-      const user = await userRepository.findUserById(decodedToken.id);
-      if (!user || user.status !== 'verified') {
-        throw new UnauthorizedError('User not authorized or account is inactive');
+      const user = await userRepository.findUserById(decodedToken.userId);
+      if (!user) {
+        throw new UnauthorizedError('Token is invalid');
+      }
+
+      if (user.status !== 'verified') {
+        throw new UnauthorizedError('Account is inactive');
       }
 
       if (isAdmin && !user.isAdmin) {
