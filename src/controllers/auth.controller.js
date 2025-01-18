@@ -44,6 +44,15 @@ class AuthController {
       data: { accessToken: newAccessToken }
     }).send(res);
   }
+
+  async sendOTP(req, res) {
+    const { email } = req.body;
+
+    await authService.sendOTP(email);
+    new OKResponse({
+      message: 'Send OTP successfully'
+    }).send(res);
+  }
 }
 
 export default new AuthController();

@@ -1,6 +1,6 @@
 import env from '~/config/env';
 import { accountStatus } from '~/constants/status';
-import { tokenTimeExpiration } from '~/constants/token';
+import { otpTimeExpiration, tokenTimeExpiration } from '~/constants/timeExpiration';
 import {
   BadRequestError,
   ConflictError,
@@ -9,9 +9,11 @@ import {
 } from '~/core/error.response';
 import tokenRepository from '~/repositories/token.repository';
 import userRepository from '~/repositories/user.repository';
-import generateSlug from '~/utils/generator.util';
+import { generateOTP, generateSlug } from '~/utils/generator.util';
 import { pick } from '~/utils/object.util';
 import { decodeToken, generateToken } from '~/utils/token.util';
+import emailService from './email.service';
+import sendOTPEmailTemplate from '~/templates/emails/sendOTPEmail';
 
 class AuthService {
   async signup(reqBody) {
@@ -120,6 +122,30 @@ class AuthService {
       newRefreshToken,
       refreshTokenCookieOptions
     };
+  }
+
+  async sendOTP(email) {
+    if (!email) throw new BadRequestError('Email is missing');
+
+    const user = await userRepository.findUserByEmail(email);
+
+    if (!user) throw new NotFoundError('This account is not exist');
+
+    if (user.status === accountStatus.VERIFIED)
+      throw new BadRequestError('Account has been verified');
+
+    const otp = generateOTP();
+    user.emailOtp = otp;
+    user.otpExpiresAt = new Date(Date.now() + otpTimeExpiration.milliseconds);
+
+    await user.save();
+
+    emailService.send({
+      to: [email],
+      subject: 'Your OTP Code for Email Verification',
+      text: sendOTPEmailTemplate.text(otp, otpTimeExpiration.minutes),
+      html: sendOTPEmailTemplate.html(otp, otpTimeExpiration.minutes)
+    });
   }
 }
 

@@ -1,5 +1,5 @@
 import slugify from 'slugify';
-const generateSlug = string => {
+export const generateSlug = string => {
   return slugify(string, {
     lower: true,
     strict: true,
@@ -7,5 +7,6 @@ const generateSlug = string => {
     trim: true
   });
 };
-
-export default generateSlug;
+export const generateOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
